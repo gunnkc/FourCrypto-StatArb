@@ -41,3 +41,4 @@ I also added a tail hedge to further limit risk.
 
 ## TODO
 - [ ] Fix STD value returned by Kalman Filter
+- [ ] Review correlation between the assets - Pearson Correlation Coeff?
