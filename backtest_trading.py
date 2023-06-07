@@ -1,51 +1,12 @@
 import backtrader as bt             # Library that streamlines backtesting
 import backtrader.feeds as btfeed   # For easier datafeed access
-import numpy as np                  # For matrix math in Kalman Filter
+import os 
 
-
-# Need further documentation
-# Class KalmanFilter allows for a dynamic linear regression model that updates with given observations
-class KalmanFilter:
-    # Takes in an initial linear line: needs intercept and three coefficients
-    def __init__(self, theta_0: list[float]):
-        # TODO: Add description of each variable
-        self.delta = 1e-4  # Basically magic number
-        self.wt = self.delta / (1 - self.delta) * np.eye(4)
-        self.vt = 1e-3  # Basically magic number
-        self.theta = theta_0
-        self.P = np.zeros((4, 4))
-        self.R = None
-        self.C = np.zeros(4)
-
-    # Uses list of the latest prices to update the coefficients, updates the hedge ratio
-    def update_state(self, price: list, hedge: list):
-        f = np.asarray([1, price[1], price[2], price[3]])   # Change of state matrix
-        y = np.asarray(price[0])                            # Current price of "main" asset - BTC/USD
-
-        if self.R is not None:
-            self.R = self.C + self.wt   # Updating the
-        else:
-            self.R = np.zeros((4, 4))   # Initializing
-
-        y_hat = f @ self.theta
-        e_t = y - y_hat
-        qt = f @ self.R @ f.T + self.vt
-        q_sqrt = np.sqrt(qt)
-
-        at = self.R @ f.T / qt
-        self.theta = self.theta + at * e_t
-        self.C = self.R - at @ f * self.R
-
-        # updates hedge ratio
-        hedge[1] = self.theta[1]
-        hedge[2] = self.theta[2]
-        hedge[3] = self.theta[3]
-
-        return self.theta[0], q_sqrt   # TODO: Double-check this is the STD
-
+from kalman_filter import KalmanFilter
 
 # Class FourCrypto facilitates a statistical arbitrage based on hedge ratios
-class FourCrypto(bt.Strategy):
+class BackTrader(bt.Strategy):
+
     def __init__(self):
         self.pos = None
         self.hedge = [1.0, 0.0, 0.0, 0.0]
@@ -141,6 +102,7 @@ class FourCrypto(bt.Strategy):
                     size=(self.mod * value),
                     exectype=bt.Order.Market
                 )
+    
 
     # Function that closes all positions
     def liquidate(self):
@@ -148,34 +110,28 @@ class FourCrypto(bt.Strategy):
             self.close(
                 data=self.datas[index]
             )
+    
+
+    def load_data(self, cerebro: bt.Cerebro, filepath: str):
+        files = [file for file in os.listdir(filepath) if file.endswith('.csv')]
+
+        for file in files:
+            try:
+                cerebro.adddata(file)
+
+            except:
+                print(f'Unrecognized file: {file}')
 
 
-if __name__ == '__main__':
-    cerebro = bt.Cerebro()
-    cerebro.broker.setcash(50000.00)
+    def run(self, dirpath: str, initial: float):
+        cerebro = bt.Cerebro()
+        cerebro.broker.setcash(initial)
+        self.load_data(dirpath)
 
-    data1 = btfeed.YahooFinanceCSVData(
-        dataname='/Users/hades/PycharmProjects/fourcryptostatarb/venv/BTC-USD.csv'
-    )
+        cerebro.addstrategy(BackTrader)
+        cerebro.broker.setcommission(0.1)
 
-    data2 = btfeed.YahooFinanceCSVData(
-        dataname='/Users/hades/PycharmProjects/fourcryptostatarb/venv/ETH-USD.csv'
-    )
+        cerebro.run()
 
-    data3 = btfeed.YahooFinanceCSVData(
-        dataname='/Users/hades/PycharmProjects/fourcryptostatarb/venv/LTC-USD.csv'
-    )
-
-    data4 = btfeed.YahooFinanceCSVData(
-        dataname='/Users/hades/PycharmProjects/fourcryptostatarb/venv/BCH-USD.csv'
-    )
-
-    cerebro.adddata(data1)
-    cerebro.adddata(data2)
-    cerebro.adddata(data3)
-    cerebro.adddata(data4)
-
-    cerebro.addstrategy(FourCrypto)
-    cerebro.broker.setcommission(0.1)
-    cerebro.run()
-    print('Final Portfolio Value:', cerebro.broker.getvalue())
+        print('Final Portfolio Value:', cerebro.broker.getvalue())
+    
