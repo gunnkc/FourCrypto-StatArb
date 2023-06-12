@@ -30,7 +30,8 @@ The filter was constructed based on this article: https://www.bzarg.com/p/how-a-
 
 ## Broker & Implementation
 I used BackTrader since I couldn't find a trustworthy broker that allows shorting cryptos.
-It is possible to implement your own LiveTrader to allow for shorting through CEX like Binance.
+It is possible to implement your own LiveTrader to allow for shorting through CEX like Binance;
+You might want to do this since my implementation (Alpaca) doesn't allow shorting of cryptocurrencies.
 
 As for trading signals, we can calculate the spread using hedge ratios and spot prices. Then we can construct an upper and lower boundary,
 using mean and the standard deviation we extracted from our Kalman Filter. The current model uses one STD away from mean as the boundaries.
@@ -41,6 +42,7 @@ It's also important to note we are only exposed to one unit of spread at a time,
 I also added a tail hedge to further limit risk.
 
 ## TODO
-- [ ] Fix STD value returned by Kalman Filter – currently spit out 
+- [ ] Fix STD value returned by Kalman Filter – currently spits out STD of estimated price
+- [ ] Fully implement live trading
 - [ ] Review correlation between the assets - Pearson Correlation Coefficient?
 - [ ] Redo documentation to ease usage
