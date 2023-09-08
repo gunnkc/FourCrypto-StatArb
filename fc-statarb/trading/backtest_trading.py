@@ -7,17 +7,15 @@ from kalman_filter import KalmanFilter
 # Class FourCrypto facilitates a statistical arbitrage based on hedge ratios
 class BackTrader(bt.Strategy):
 
-    def __init__(self):
+    def __init__(self, initial: dict):
         self.pos = None
         self.hedge = [1.0, 0.0, 0.0, 0.0]
-        self.initial = [4612.39, 7.15, -65.79, 76.14]  # Calculated from backtest data - DOES NOT PASS CADF
         self.mod = 1  # Coefficient that modifies purchase size
-        self.kalman = KalmanFilter(self.initial)
+        self.kalman = KalmanFilter(initial['spread'])
 
         # Mean & Standard deviation of spread - used for trading signal
-        # both values match the timeframe of 10/10/22 - 12/30/22
-        self.hedgeMean = 31841.09
-        self.hedgeSig = 3078.75  # STD not being updated fast enough
+        self.hedgeMean = initial['mean']
+        self.hedgeSig = initial['std']
 
         # Calculating entry/exit thresholds in terms of STD
         self.sigMod = 1
@@ -32,13 +30,11 @@ class BackTrader(bt.Strategy):
     def next(self):
         for index in range(4):
             self.prices[index] = self.datas[index][0]
-        # print(self.hedge)
         self.check_arb()
 
     # Function that contains arbitrage logic; captures mean-reversion on cointegrated portfolio
     # Important to note that it does not have stop loss or trailing stop; relies on logic entirely
     def check_arb(self):
-        # the STD is too low; the Kalman Filter is not working as intended
         self.hedgeMean, self.hedgeSig = self.kalman.update_state(self.prices, self.hedge)
 
         spread = 0
